@@ -1,0 +1,82 @@
+name: CI/CD — Astro Deploy
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint-and-test:
+    name: Lint & Unit Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install apache-airflow==2.8.0 pytest \
+            astronomer-cosmos==1.5.0 dbt-core==1.7.0 dbt-postgres==1.7.0
+
+      - name: Lint DAGs (Ruff)
+        run: |
+          pip install ruff
+          ruff check dags/
+
+      - name: Run DAG unit tests
+        run: pytest tests/ -v
+
+  dbt-compile:
+    name: dbt Compile Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Install dbt
+        run: pip install dbt-core==1.7.0 dbt-postgres==1.7.0
+
+      - name: dbt deps
+        working-directory: include/dbt
+        run: dbt deps
+
+      - name: dbt compile
+        working-directory: include/dbt
+        run: dbt compile --profiles-dir profiles/
+        env:
+          DBT_HOST: localhost
+          DBT_PORT: "5432"
+          DBT_USER: airflow
+          DBT_PASSWORD: airflow
+          DBT_DATABASE: airflow
+          DBT_SCHEMA: dbt_dev
+
+  deploy:
+    name: Deploy to Astronomer Cloud
+    runs-on: ubuntu-latest
+    needs: [lint-and-test, dbt-compile]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install Astro CLI
+        run: |
+          curl -sSL https://install.astronomer.io | sudo bash -s
+
+      - name: Deploy to Astro
+        run: astro deploy ${{ secrets.ASTRO_DEPLOYMENT_ID }} --force
+        env:
+          ASTRONOMER_KEY_ID: ${{ secrets.ASTRONOMER_KEY_ID }}
+          ASTRONOMER_KEY_SECRET: ${{ secrets.ASTRONOMER_KEY_SECRET }}

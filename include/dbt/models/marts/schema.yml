@@ -1,0 +1,41 @@
+version: 2
+
+models:
+  - name: fct_daily_event_summary
+    description: "Daily aggregated event metrics per user. Consumed by BI/reporting."
+    columns:
+      - name: summary_id
+        tests: [unique, not_null]
+      - name: event_date
+        tests: [not_null]
+      - name: user_id
+        tests: [not_null]
+      - name: total_events
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+      - name: total_revenue
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+
+  - name: fct_events_incremental
+    description: "Incremental enriched events table. Merges on event_id."
+    columns:
+      - name: event_id
+        tests: [unique, not_null]
+      - name: user_id
+        tests: [not_null]
+      - name: event_type
+        tests: [not_null]
+      - name: event_ts
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              expression: "<= NOW()"
+              name: assert_no_future_events
+      - name: event_category
+        tests:
+          - accepted_values:
+              values: ['engagement', 'conversion', 'acquisition', 'other']

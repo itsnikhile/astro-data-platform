@@ -1,0 +1,22 @@
+# Astro / Airflow
+.env
+airflow_settings.yaml
+logs/
+.astro/
+
+# dbt
+include/dbt/target/
+include/dbt/dbt_packages/
+include/dbt/.user.yml
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+dist/
+build/
+
+# OS
+.DS_Store
+Thumbs.db

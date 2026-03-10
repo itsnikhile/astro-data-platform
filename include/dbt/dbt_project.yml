@@ -1,0 +1,30 @@
+name: 'astro_dbt_demo'
+version: '1.0.0'
+config-version: 2
+
+profile: 'astro_dbt_demo'
+
+model-paths: ["models"]
+seed-paths: ["seeds"]
+test-paths: ["tests"]
+macro-paths: ["macros"]
+
+target-path: "target"
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+models:
+  astro_dbt_demo:
+    staging:
+      +materialized: view
+      +schema: staging
+      +tags: ["daily"]
+    marts:
+      +materialized: table
+      +schema: marts
+      +tags: ["daily"]
+    incremental:
+      +materialized: incremental
+      +schema: marts
+      +tags: ["daily"]
